@@ -1,0 +1,107 @@
+local uis = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local speaker = player
+local mouse = speaker:GetMouse()
+local nowe = false
+local flySpeed = 50 -- 设定飞行速度
+
+-- 创建 UI 按钮
+local screengui = Instance.new("ScreenGui", speaker:FindFirstChildOfClass("PlayerGui"))
+local onof = Instance.new("TextButton", screengui)
+onof.Size = UDim2.new(0, 100, 0, 50)
+onof.Position = UDim2.new(0, 50, 0, 50)
+onof.Text = "飞行模式"
+onof.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+
+-- 角色飞行函数
+function fly()
+    local root = speaker.Character and speaker.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+    bodyVelocity.Parent = root
+
+    local flying = true
+
+    local function onMove(input, gameProcessed)
+        if gameProcessed then return end
+        local moveDir = Vector3.new()
+
+        if input.KeyCode == Enum.KeyCode.W then
+            moveDir = moveDir + Vector3.new(0, 0, -1)
+        elseif input.KeyCode == Enum.KeyCode.S then
+            moveDir = moveDir + Vector3.new(0, 0, 1)
+        elseif input.KeyCode == Enum.KeyCode.A then
+            moveDir = moveDir + Vector3.new(-1, 0, 0)
+        elseif input.KeyCode == Enum.KeyCode.D then
+            moveDir = moveDir + Vector3.new(1, 0, 0)
+        elseif input.KeyCode == Enum.KeyCode.Space then
+            moveDir = moveDir + Vector3.new(0, 1, 0)
+        elseif input.KeyCode == Enum.KeyCode.LeftControl then
+            moveDir = moveDir + Vector3.new(0, -1, 0)
+        end
+
+        bodyVelocity.Velocity = moveDir * flySpeed
+    end
+
+    local moveConn = uis.InputBegan:Connect(onMove)
+    local endConn = uis.InputEnded:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    end)
+
+    -- 停止飞行的函数
+    local function stopFly()
+        flying = false
+        bodyVelocity:Destroy()
+        moveConn:Disconnect()
+        endConn:Disconnect()
+    end
+
+    return stopFly
+end
+
+-- 按钮点击事件
+onof.MouseButton1Down:Connect(function()
+    if nowe then
+        nowe = false
+        onof.Text = "飞行模式"
+        onof.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+
+        -- 还原 Humanoid 生命值
+        local humanoid = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.MaxHealth = 100
+            humanoid.Health = 100
+        end
+
+        -- 关闭飞行
+        if speaker.Character then
+            local root = speaker.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, v in pairs(root:GetChildren()) do
+                    if v:IsA("BodyVelocity") then
+                        v:Destroy()
+                    end
+                end
+            end
+        end
+    else
+        nowe = true
+        onof.Text = "无敌飞行"
+        onof.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+
+        -- 设置无敌状态
+        local humanoid = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.MaxHealth = math.huge
+            humanoid.Health = math.huge
+        end
+
+        -- 开启飞行
+        fly()
+    end
+end)
